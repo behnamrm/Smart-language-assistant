@@ -14,6 +14,10 @@
       --current: #2563eb;
       --future: #a8a29e;
       --card: #ffffff;
+      --backdrop: #d6d3d1;
+      --backdrop-sharp: #a8a29e;
+      --x: -999px;
+      --y: -999px;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -25,17 +29,52 @@
         --current: #60a5fa;
         --future: #57534e;
         --card: #292524;
+        --backdrop: #44403c;
+        --backdrop-sharp: #78716c;
       }
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
+      min-height: 100vh;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;
+      overflow-x: hidden;
     }
-    main { max-width: 1100px; margin: 0 auto; padding: 48px 16px; }
+
+    /* Launch date in the background: blurred, sharp only around the pointer */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 12vh;
+      pointer-events: none;
+      user-select: none;
+      color: var(--backdrop);
+      font-weight: 800;
+      text-align: center;
+      line-height: 0.9;
+    }
+    .backdrop .label { font-size: clamp(1rem, 3vw, 2rem); letter-spacing: 0.3em; }
+    .backdrop .date { font-size: min(14vw, 15rem); letter-spacing: -0.03em; }
+    .backdrop.blurred { filter: blur(14px); }
+    .backdrop.sharp {
+      color: var(--backdrop-sharp);
+      -webkit-mask-image: radial-gradient(circle 180px at var(--x) var(--y), #000 30%, transparent 100%);
+      mask-image: radial-gradient(circle 180px at var(--x) var(--y), #000 30%, transparent 100%);
+    }
+
+    main {
+      position: relative;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 16px;
+    }
     h1 { margin: 0 0 4px; font-size: 1.75rem; }
     .subtitle { margin: 0 0 48px; color: var(--muted); }
 
@@ -76,24 +115,20 @@
       border: 3px solid var(--future);
     }
     .past .dot { background: var(--past); border-color: var(--past); }
-    .current .dot {
+    .current .dot { background: var(--current); border-color: var(--current); }
+    .current .dot::after {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
       background: var(--current);
-      border-color: var(--current);
-      box-shadow: 0 0 0 6px color-mix(in srgb, var(--current) 25%, transparent);
+      animation: pulse 1.8s ease-out infinite;
+    }
+    @keyframes pulse {
+      from { transform: scale(1); opacity: 0.6; }
+      to { transform: scale(2.6); opacity: 0; }
     }
 
-    .tag {
-      display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .current .tag { color: var(--current); }
-    .name { margin: 4px 0 2px; font-weight: 600; }
-    .future .name { color: var(--muted); }
-    .dates { margin: 0; font-size: 0.85rem; color: var(--muted); }
     .card {
       border: 1px solid transparent;
       border-radius: 8px;
@@ -103,9 +138,54 @@
       background: var(--card);
       border-color: var(--current);
     }
+    .live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--current);
+    }
+    .live::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: blink 1.2s ease-in-out infinite;
+    }
+    @keyframes blink { 50% { opacity: 0.2; } }
+
+    .name { margin: 4px 0 2px; font-weight: 600; }
+    .future .name { color: var(--muted); }
+    .dates { margin: 0; font-size: 0.85rem; color: var(--muted); }
+
+    .survey {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: var(--current);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .survey:hover { transform: translateY(-1px); box-shadow: 0 4px 12px color-mix(in srgb, var(--current) 40%, transparent); }
+    .survey:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .current .dot::after, .live::before { animation: none; }
+    }
   </style>
 </head>
 <body>
+  <div class="backdrop blurred" aria-hidden="true"><span class="label">LAUNCH</span><span class="date">27.01.2027</span></div>
+  <div class="backdrop sharp" aria-hidden="true"><span class="label">LAUNCH</span><span class="date">27.01.2027</span></div>
+
   <main>
     <h1>Smart Language Assistant</h1>
     <p class="subtitle">Project roadmap</p>
@@ -113,39 +193,63 @@
   </main>
 
   <script>
-    // Edit this list to update the roadmap. Dates are YYYY-MM-DD (inclusive).
-    // Past / current / future is worked out automatically from today's date.
-    const phases = [
-      { name: "Research & select theme", start: "2026-10-01", end: "2026-10-15" },
-      { name: "Design & planning",       start: "2026-10-16", end: "2026-11-15" },
-      { name: "Build prototype",         start: "2026-11-16", end: "2026-12-31" },
-      { name: "Testing & feedback",      start: "2027-01-01", end: "2027-01-31" },
-      { name: "Launch",                  start: "2027-02-01", end: "2027-02-28" },
-    ];
+    // Link for the "Fill the survey" button on the current phase.
+    const SURVEY_URL = "#";
 
-    const parse = (s) => new Date(s + "T00:00:00");
-    const fmt = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Edit this list to update the roadmap. Exactly one phase should be "current".
+    // "dates" is optional and shown under the phase name.
+    const phases = [
+      { name: "Research & select theme", status: "past", dates: "Oct 1 – Oct 15, 2026" },
+      { name: "User research",           status: "current" },
+      { name: "Design",                  status: "future" },
+      { name: "Build prototype",         status: "future" },
+      { name: "Testing & feedback",      status: "future" },
+      { name: "Launch",                  status: "future", dates: "Jan 27, 2027" },
+    ];
 
     const timeline = document.getElementById("timeline");
     for (const p of phases) {
-      const start = parse(p.start), end = parse(p.end);
-      const status = end < today ? "past" : start > today ? "future" : "current";
-      const label = { past: "Done", current: "Now", future: "Upcoming" }[status];
-
       const el = document.createElement("div");
-      el.className = "phase " + status;
-      el.innerHTML = `
-        <div class="dot"></div>
-        <div class="card">
-          <span class="tag">${label}</span>
-          <p class="name"></p>
-          <p class="dates">${fmt(start)} – ${fmt(end)}</p>
-        </div>`;
-      el.querySelector(".name").textContent = p.name;
+      el.className = "phase " + p.status;
+      el.innerHTML = '<div class="dot"></div><div class="card"></div>';
+      const card = el.querySelector(".card");
+
+      if (p.status === "current") {
+        card.insertAdjacentHTML("beforeend", '<span class="live">Live · Now</span>');
+      }
+      const name = document.createElement("p");
+      name.className = "name";
+      name.textContent = p.name;
+      card.appendChild(name);
+      if (p.dates) {
+        const dates = document.createElement("p");
+        dates.className = "dates";
+        dates.textContent = p.dates;
+        card.appendChild(dates);
+      }
+      if (p.status === "current") {
+        const link = document.createElement("a");
+        link.className = "survey";
+        link.href = SURVEY_URL;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "Fill the survey";
+        card.appendChild(link);
+      }
       timeline.appendChild(el);
     }
+
+    // Move the sharp spotlight on the background date with the pointer
+    const root = document.documentElement;
+    const reveal = (x, y) => {
+      root.style.setProperty("--x", x + "px");
+      root.style.setProperty("--y", y + "px");
+    };
+    const hide = () => reveal(-999, -999);
+    window.addEventListener("pointermove", (e) => reveal(e.clientX, e.clientY));
+    window.addEventListener("touchmove", (e) => reveal(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    document.addEventListener("pointerleave", hide);
+    window.addEventListener("touchend", hide);
   </script>
 </body>
 </html>
